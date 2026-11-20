@@ -267,7 +267,7 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         if not isinstance(v, (int, float)) or v < minimum:
             f.append(Finding("error", "E2", run_rel, f"task.{key} must be a number >= {minimum}"))
 
-    res = rec.get("result") or {}
+    res = _obj(rec, "result", f, run_rel)
     for key in ("solved", "flags", "score"):
         v = res.get(key)
         if not isinstance(v, int) or v < 0:
@@ -352,7 +352,7 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         f.append(Finding("warn", "W1", run_rel, "no notes.md (recommended)"))
     if not files.get("events") and not files.get("sessions"):
         f.append(Finding("warn", "W1", run_rel, "no events.csv and no sessions"))
-    if not rec.get("metrics"):
+    if not _obj(rec, "metrics", f, run_rel):
         f.append(Finding("warn", "W1", run_rel, "no metrics block"))
     if not files.get("challenges"):
         f.append(Finding("warn", "W2", run_rel, "challenges.jsonl missing (one row per challenge)"))
