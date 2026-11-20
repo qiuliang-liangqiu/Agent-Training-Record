@@ -22,7 +22,7 @@ submissions/<github-handle>/<run-id>/
 
 | 文件 | 必填 | 说明 |
 |---|---|---|
-| `record.json` | ✅ | 元数据与结果，见 `schema/record.schema.json` |
+| `record.json` | ✅ | 元数据与结果，见 `framework/schema/record.schema.json` |
 | `notes.md` | 建议 | 复盘：现象 → 根因 → 写死的规则；**没有会出 warning** |
 | `events.csv` | 可选 | 平台导出的事件表（启动/关闭/得分） |
 | `sessions/*.jsonl` | 可选 | agent 会话，**必须脱敏**；一行一个 JSON |
@@ -49,12 +49,12 @@ submissions/<github-handle>/<run-id>/
 - [ ] 邮箱、真实姓名、设备 ID → 删掉
 
 会话文件（`sessions/*.jsonl`）最常见的问题：`toolResult` 里夹着 flag 和完整响应头。
-建议先用 `python scripts/validate.py <dir>` 扫一遍，红灯就说明还有残留。
+建议先用 `python framework/scripts/validate.py <dir>` 扫一遍，红灯就说明还有残留。
 
 ## 5. 本地校验
 
 ```bash
-python scripts/validate.py submissions/<handle>/<run-id>
+python framework/scripts/validate.py submissions/<handle>/<run-id>
 ```
 
 输出里的规则编号：
@@ -77,7 +77,7 @@ python scripts/validate.py submissions/<handle>/<run-id>
 
 - 一个 PR 只加一次提交（或同一人的同一批），不要顺手改别人的目录。
 - 标题：`submission: <handle> <run-id>`。
-- 描述里贴一行 `python scripts/validate.py submissions/<handle>/<run-id>` 的输出。
+- 描述里贴一行 `python framework/scripts/validate.py submissions/<handle>/<run-id>` 的输出。
 - CI 通过后再请维护者合并；需要修改就在同一个分支追加 commit。
 
 ## 7. 会被直接关掉的 PR
@@ -89,5 +89,5 @@ python scripts/validate.py submissions/<handle>/<run-id>
 
 ## 8. 想加字段？
 
-先改 `schema/record.schema.json` + `scripts/validate.py` + 一个测试用例，再发 PR 说明用途。
+先改 `framework/schema/record.schema.json` + `framework/scripts/validate.py` + 一个测试用例，再发 PR 说明用途。
 向后兼容优先：新增字段必须是可选。

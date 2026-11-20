@@ -8,8 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-VALIDATE = ROOT / "scripts" / "validate.py"
+REPO = Path(__file__).resolve().parents[2]      # repo root
+FRAMEWORK = REPO / "framework"
+ROOT = FRAMEWORK
+VALIDATE = FRAMEWORK / "scripts" / "validate.py"
 
 
 def run(*paths: str) -> subprocess.CompletedProcess:
@@ -117,7 +119,7 @@ class ValidatorTest(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
 
     def test_example_submission_passes(self):
-        r = run(str(ROOT / "submissions"))
+        r = run(str(REPO / "submissions"))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 

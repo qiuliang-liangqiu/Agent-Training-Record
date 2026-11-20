@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Scaffold a submission directory: submissions/<handle>/<run-id>/.
 
-    python scripts/new_submission.py --handle octocat --run-id 2026-11-20-bench \
+    python framework/scripts/new_submission.py --handle octocat --run-id 2026-11-20-bench \
         --agent pi --version 1.5.2 --model deepseek-flash \
         --kind benchmark --challenges 50 --flag-total 100 --hours 7.9 \
         --solved 37 --flags 47 --score 13800
 
-    python scripts/new_submission.py --handle octocat --run-id demo --interactive
+    python framework/scripts/new_submission.py --handle octocat --run-id demo --interactive
 
 The generated record.json is a *template*: fill in real numbers, drop your
 events.csv / notes.md / sanitized sessions into the same folder, then run
-    python scripts/validate.py submissions/<handle>/<run-id>
+    python framework/scripts/validate.py submissions/<handle>/<run-id>
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ TEMPLATE = """# {handle} · {run_id}
 - [ ] 没有真实 flag（只保留 `flag{{REDACTED}}`）
 - [ ] 没有平台域名 / 运行 ID / 内网 IP
 - [ ] 没有 token / cookie / Authorization
-- [ ] `python scripts/validate.py <this dir>` 通过
+- [ ] `python framework/scripts/validate.py <this dir>` 通过
 """
 
 
@@ -143,7 +143,7 @@ def main() -> int:
     print("next:")
     print(f"  1) edit {run/'record.json'} (real numbers, files.sessions list)")
     print(f"  2) drop sanitized files into {run}")
-    print(f"  3) python scripts/validate.py {run}")
+    print(f"  3) python framework/scripts/validate.py {run}")
     return 0
 
 
