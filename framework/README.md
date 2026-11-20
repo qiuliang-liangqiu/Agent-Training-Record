@@ -10,7 +10,7 @@
 一次提交 = 一个目录：
 
 ```
-submissions/
+contributions/
 └── <你的 GitHub handle>/
     └── <run-id>/                 # 例如 2026-11-20-bench
         ├── record.json           # 必填：元数据与结果（schema 见下）
@@ -53,14 +53,14 @@ python framework/scripts/new_submission.py --handle <you> --run-id <run-id> \
   --solved 37 --flags 47 --score 13800
 
 # 把 events.csv / notes.md / 脱敏会话放进该目录，然后：
-python framework/scripts/validate.py submissions/<you>/<run-id>
-git add submissions/<you> && git commit -m "submission: <handle> <run-id>"
+python framework/scripts/validate.py contributions/<you>/<run-id>
+git add contributions/<you> && git commit -m "submission: <handle> <run-id>"
 git push -u origin submit/<handle>-<run-id>
 ```
 
 然后开 PR。CI 会自动跑同一个校验器；**红的就是没脱敏干净**，按提示改完再推。
 
-没有 Python 环境也能提：直接照 `submissions/example/demo-run-001/` 复制目录、手改
+没有 Python 环境也能提：直接照 `framework/examples/example/demo-run-001/` 复制目录、手改
 `record.json`，PR 里 CI 会告诉你是哪一条不过。
 
 ## 隐私闸门（会拒收的情况）
@@ -89,16 +89,16 @@ git push -u origin submit/<handle>-<run-id>
 ## 许可
 
 - `scripts/`、`schema/`、CI 配置：MIT（见 [`framework/LICENSE`](LICENSE)）。
-- `submissions/` 下的记录：由提交者保留著作权，按提交时 `consent.license`
+- `contributions/` 下的记录：由提交者保留著作权，按提交时 `consent.license`
   授权（`CC-BY-4.0` / `CC0-1.0` / `MIT`），见 [`framework/RECORDS-LICENSE.md`](RECORDS-LICENSE.md)。
 - 只接受 `consent.redistribute: true` 的记录 —— 提交即表示同意上述授权。
 
 ## 本地校验
 
 ```bash
-python framework/scripts/validate.py submissions              # 全量
-python framework/scripts/validate.py submissions/<you>/<run>  # 单条
-python framework/scripts/validate.py submissions --strict     # 警告也算失败
+python framework/scripts/validate.py contributions              # 全量
+python framework/scripts/validate.py contributions/<you>/<run>  # 单条
+python framework/scripts/validate.py contributions --strict     # 警告也算失败
 python -m unittest discover -s framework/tests -v             # 校验器自身的测试
 ```
 

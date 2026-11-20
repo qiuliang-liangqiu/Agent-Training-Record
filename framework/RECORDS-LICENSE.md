@@ -2,7 +2,7 @@
 
 `scripts/`、`schema/`、`.github/` 与本文件之外的工程文件用 MIT（见 `LICENSE`）。
 
-`submissions/` 下的每一份记录由**提交者**保留著作权，并按 `record.json` 里的
+`contributions/` 下的每一份记录由**提交者**保留著作权，并按 `record.json` 里的
 `consent.license` 授权给本仓库及其他使用者：
 
 - `CC-BY-4.0`：允许复制、再分发与演绎，需署名（默认选项）
@@ -24,7 +24,7 @@
 
 ## 引用与署名
 
-论文/博客里引用时用：`Agent-Training-Record, submissions/<handle>/<run-id>`。
+论文/博客里引用时用：`Agent-Training-Record, contributions/<handle>/<run-id>`。
 `consent.attribution` 非空时，请按其中写的名字署名。
 
 ## 移除请求

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Scaffold a submission directory: submissions/<handle>/<run-id>/.
+"""Scaffold a submission directory: contributions/<handle>/<run-id>/.
 
     python framework/scripts/new_submission.py --handle octocat --run-id 2026-11-20-bench \
         --agent pi --version 1.5.2 --model deepseek-flash \
@@ -10,7 +10,7 @@
 
 The generated record.json is a *template*: fill in real numbers, drop your
 events.csv / notes.md / sanitized sessions into the same folder, then run
-    python framework/scripts/validate.py submissions/<handle>/<run-id>
+    python framework/scripts/validate.py contributions/<handle>/<run-id>
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def ask(prompt: str, default: str = "") -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="submissions")
+    ap.add_argument("--out", default="contributions")
     ap.add_argument("--handle", default="")
     ap.add_argument("--run-id", default="")
     ap.add_argument("--agent", default="pi")

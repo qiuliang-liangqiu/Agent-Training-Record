@@ -10,14 +10,16 @@ permissions:
   contents: read
 
 jobs:
-  submissions:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Validate schema + privacy
-        run: python framework/scripts/validate.py submissions
+      - name: Validate the format example (must always pass)
+        run: python framework/scripts/validate.py framework/examples --strict
+      - name: Validate contributions (empty is fine)
+        run: python framework/scripts/validate.py contributions
       - name: Self-check the validator
         run: python -m unittest discover -s framework/tests -v

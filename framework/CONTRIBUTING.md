@@ -8,7 +8,7 @@
 ## 1. 目录与命名
 
 ```
-submissions/<github-handle>/<run-id>/
+contributions/<github-handle>/<run-id>/
 ```
 
 - `<github-handle>`：全部小写，只允许 `a-z 0-9 -`，必须和 PR 作者的 GitHub 用户名一致
@@ -54,7 +54,7 @@ submissions/<github-handle>/<run-id>/
 ## 5. 本地校验
 
 ```bash
-python framework/scripts/validate.py submissions/<handle>/<run-id>
+python framework/scripts/validate.py contributions/<handle>/<run-id>
 ```
 
 输出里的规则编号：
@@ -77,7 +77,7 @@ python framework/scripts/validate.py submissions/<handle>/<run-id>
 
 - 一个 PR 只加一次提交（或同一人的同一批），不要顺手改别人的目录。
 - 标题：`submission: <handle> <run-id>`。
-- 描述里贴一行 `python framework/scripts/validate.py submissions/<handle>/<run-id>` 的输出。
+- 描述里贴一行 `python framework/scripts/validate.py contributions/<handle>/<run-id>` 的输出。
 - CI 通过后再请维护者合并；需要修改就在同一个分支追加 commit。
 
 ## 7. 会被直接关掉的 PR

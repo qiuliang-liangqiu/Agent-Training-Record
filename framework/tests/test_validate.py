@@ -37,7 +37,7 @@ def base_record(**over) -> dict:
 
 class ValidatorTest(unittest.TestCase):
     def make(self, tmp: Path, record: dict, extra: dict[str, str] | None = None) -> Path:
-        run_dir = tmp / "submissions" / "octocat" / "run-001"
+        run_dir = tmp / "contributions" / "octocat" / "run-001"
         run_dir.mkdir(parents=True)
         (run_dir / "record.json").write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
         (run_dir / "notes.md").write_text("# notes\n", encoding="utf-8")
@@ -119,8 +119,16 @@ class ValidatorTest(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
 
     def test_example_submission_passes(self):
-        r = run(str(REPO / "submissions"))
+        r = run(str(FRAMEWORK / "examples"))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_empty_contributions_dir_is_ok(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            empty = Path(tmp) / "contributions"
+            empty.mkdir()
+            (empty / ".gitkeep").write_text("", encoding="utf-8")
+            r = run(str(empty))
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Validate a training-record submission (schema + privacy gate).
 
-    python scripts/validate.py submissions                      # all runs
-    python scripts/validate.py submissions/<handle>/<run-id>    # one run
-    python scripts/validate.py submissions --strict --json      # CI mode
+    python framework/scripts/validate.py contributions                     # all runs
+    python framework/scripts/validate.py contributions/<handle>/<run-id>   # one run
+    python framework/scripts/validate.py contributions --strict --json     # CI mode
 
 Exit code 0 = all runs valid, 1 = at least one failed (or a warning under --strict),
 2 = nothing found. Only the standard library is used, so CI needs no installs.
@@ -13,7 +13,7 @@ Rules enforced
 E1  record.json exists and parses
 E2  schema == "atr/1" and required fields/types/enums are correct
 E3  numeric ranges (0 <= solved <= challenges, ...)
-E4  path layout is submissions/<handle>/<run-id>/ and handle matches the directory
+E4  path layout is contributions/<handle>/<run-id>/ and handle matches the directory
 E5  every file listed in `files` exists, is inside the run dir, and has an allowed type
 E6  size limits per file / per run
 E7  privacy scan: real flags, tokens, private IPs, absolute home paths, e-mail
@@ -223,7 +223,7 @@ def main() -> int:
     except Exception:
         pass
     ap = argparse.ArgumentParser()
-    ap.add_argument("paths", nargs="*", default=["submissions"])
+    ap.add_argument("paths", nargs="*", default=["contributions"])
     ap.add_argument("--strict", action="store_true", help="warnings are failures")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
@@ -241,8 +241,9 @@ def main() -> int:
             runs += iter_runs(root)
 
     if not runs:
-        print("no submissions found (expected submissions/<handle>/<run-id>/record.json)", file=sys.stderr)
-        return 2
+        # An empty upload area is a valid state (nobody contributed yet) — not an error.
+        print("no submissions yet (expected contributions/<handle>/<run-id>/record.json)")
+        return 0
 
     report, failed = [], False
     for run in runs:
