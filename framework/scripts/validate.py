@@ -153,6 +153,7 @@ def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
 
     rows = 0
     solved = flags = 0
+    seen_ids: set[str] = set()
     for i, line in enumerate(text.splitlines(), 1):
         if not line.strip():
             continue
@@ -189,14 +190,19 @@ def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
                 f.append(Finding("error", "E9", rel, f"line {i}: flags > flag_total"))
         elif ft is not None and not isinstance(ft, int):
             f.append(Finding("error", "E9", rel, f"line {i}: flag_total must be an int or omitted"))
+        cid = str(row.get("id", ""))
+        if cid:
+            if cid in seen_ids:
+                f.append(Finding("error", "E9", rel, f"line {i}: duplicate id {cid!r}"))
+            seen_ids.add(cid)
         if row.get("outcome") == "solved":
             solved += 1
         if isinstance(row.get("flags"), int):
             flags += row["flags"]
 
 
-    res = rec.get("result") or {}
-    task = rec.get("task") or {}
+    res = _obj(rec, "result", f, rel)
+    task = _obj(rec, "task", f, rel)
     if rows and isinstance(task.get("challenges"), int) and rows > task["challenges"]:
         f.append(Finding("error", "E10", rel,
                          f"{rows} rows but task.challenges={task['challenges']}"))
@@ -209,6 +215,18 @@ def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
     return f
 
 
+def _obj(rec: dict, key: str, f: list[Finding], run_rel: str) -> dict:
+    """取一个必须是对象的字段；不是对象就记 E2 并当作空对象，避免后续崩栈。"""
+    value = rec.get(key)
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        f.append(Finding("error", "E2", run_rel,
+                         f"{key} must be a JSON object, got {type(value).__name__}"))
+        return {}
+    return value
+
+
 def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None, list[Finding]]:
     f: list[Finding] = []
     rec_path = run / "record.json"
@@ -218,6 +236,9 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         rec = json.loads(rec_path.read_text(encoding="utf-8"))
     except Exception as exc:
         return None, [Finding("error", "E1", run_rel, f"record.json unreadable: {exc}")]
+    if not isinstance(rec, dict):
+        return None, [Finding("error", "E1", run_rel,
+                              f"record.json must be a JSON object, got {type(rec).__name__}")]
 
     # E2 schema
     if rec.get("schema") != SCHEMA_ID:
@@ -233,12 +254,12 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
     if not re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}", str(rec.get("submitted_at", ""))):
         f.append(Finding("error", "E2", run_rel, "submitted_at must be ISO-8601 (YYYY-MM-DDTHH:MM:SSZ)"))
 
-    agent = rec.get("agent") or {}
+    agent = _obj(rec, "agent", f, run_rel)
     for key in ("name", "version", "model"):
         if not isinstance(agent.get(key), str) or not agent.get(key):
             f.append(Finding("error", "E2", run_rel, f"agent.{key} required (string)"))
 
-    task = rec.get("task") or {}
+    task = _obj(rec, "task", f, run_rel)
     if task.get("kind") not in KINDS:
         f.append(Finding("error", "E2", run_rel, f"task.kind must be one of {sorted(KINDS)}"))
     for key, minimum in (("challenges", 0), ("flag_total", 0), ("hours", 0.01)):
@@ -260,14 +281,14 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         if task["flag_total"] > 0 and res["flags"] > task["flag_total"]:
             f.append(Finding("error", "E3", run_rel, "result.flags > task.flag_total"))
 
-    consent = rec.get("consent") or {}
+    consent = _obj(rec, "consent", f, run_rel)
     if consent.get("license") not in LICENSES:
         f.append(Finding("error", "E2", run_rel, f"consent.license must be one of {sorted(LICENSES)}"))
     if consent.get("redistribute") is not True:
         f.append(Finding("error", "E2", run_rel, "consent.redistribute must be true to accept the record"))
 
     # E5/E6 files
-    files = rec.get("files") or {}
+    files = _obj(rec, "files", f, run_rel)
     if isinstance(files.get("challenges"), str) and files["challenges"]:
         f.extend(check_challenges(run, files["challenges"], rec))
     if isinstance(files.get("trajectory"), str) and files["trajectory"]:

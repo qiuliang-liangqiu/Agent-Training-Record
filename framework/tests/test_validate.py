@@ -213,6 +213,33 @@ class ValidatorTest(unittest.TestCase):
             r = run(str(d))
             self.assertEqual(r.returncode, 0, r.stdout)
 
+    def test_non_object_record_reports_e1(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp) / "contributions" / "octocat" / "run-001"
+            d.mkdir(parents=True)
+            (d / "record.json").write_text("[1,2,3]" + chr(10), encoding="utf-8")
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("E1", r.stdout)
+            self.assertNotIn("Traceback", r.stdout)
+
+    def test_files_not_object_reports_e2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(files=["notes.md"])
+            d = self.make(Path(tmp), rec)
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("E2", r.stdout)
+            self.assertNotIn("Traceback", r.stdout)
+
+    def test_duplicate_challenge_id_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dup = ROW_GOOD + chr(10) + ROW_GOOD
+            d = self.make(Path(tmp), base_record(), {"challenges.jsonl": dup + chr(10)})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("duplicate id", r.stdout)
+
     def test_example_submission_passes(self):
         r = run(str(FRAMEWORK / "examples"))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)

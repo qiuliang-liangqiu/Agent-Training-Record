@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """One-shot builder: turn a finished run into a valid submission.
 
-    python framework/scripts/collect.py --handle <you> --run-id 2026-11-20-bench \
-        --from ~/run-logs --out contributions
+    python framework/scripts/collect.py --handle <you> --run-id 2026-11-20-bench --from ~/run-logs
+    python framework/scripts/collect.py --handle <you> --run-id one-1 --from ./attachments --kind single --solved 1 --family pwn
+    python framework/scripts/collect.py --handle <you> --run-id 2026-11-21-ctf --from ./runs --kind ctf
 
 Inputs it looks for inside --from
 ---------------------------------
@@ -82,13 +83,29 @@ def load_events(path: Path) -> list[dict]:
     return [r for r in rows if r["time"] and r["challenge"]]
 
 
+FAMILY_TOKENS = {
+    "web": "web", "pwn": "pwn", "crypto": "crypto", "rev": "rev", "re": "rev",
+    "forensics": "forensics", "misc": "misc", "osint": "osint", "android": "rev",
+}
+
+
+def guess_family(*parts: str) -> str:
+    """从题目代号/目录名里猜赛道（web-easy → web），猜不到就 other。"""
+    low = " ".join(p or "" for p in parts).lower()
+    for token, fam in FAMILY_TOKENS.items():
+        if re.search(rf"(?<![a-z]){re.escape(token)}(?![a-z])", low):
+            return fam
+    return "other"
+
+
 def derive_challenges(events: list[dict]) -> list[dict]:
     """start->close = minutes; score events = flags; never scored = dead_end."""
     opened: dict[str, dict] = {}
     rows: dict[str, dict] = {}
     for ev in events:
         code = ev["challenge"]
-        row = rows.setdefault(code, {"id": code, "family": "other", "difficulty": "unknown",
+        row = rows.setdefault(code, {"id": code, "family": guess_family(code, ev["detail"]),
+                                     "difficulty": "unknown",
                                      "outcome": "not_started", "minutes": 0.0, "flags": 0,
                                      "flag_total": 0, "reopens": 0, "triage": "",
                                      "first_signal_minutes": 0, "dead_end_reason": "",
@@ -171,6 +188,13 @@ file ./extracted
 def build_single(args, src: Path) -> int:
     """一题一份：附件 + 端口 → 一条成功轨迹。"""
     files = [p for p in sorted(src.iterdir()) if p.is_file()]
+    if not files and not args.description:
+        print("单题模式需要原料：把附件放进 --from 目录，或用 --description 写清题面",
+              file=sys.stderr)
+        return 2
+    if args.solved == -1:
+        print("单题模式必须显式给 --solved 0 或 --solved 1（不替你猜结果）", file=sys.stderr)
+        return 2
     attachment = ""
     if files:
         big = max(files, key=lambda p: p.stat().st_size)
@@ -247,6 +271,19 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    import re as _re
+    HANDLE_RE = _re.compile(r"^[a-z0-9][a-z0-9-]{1,38}$")
+    RUN_RE = _re.compile(r"^[a-z0-9][a-z0-9._-]{2,63}$")
+    args.handle = args.handle.strip().lower()
+    if not HANDLE_RE.match(args.handle):
+        print(f"--handle 必须是你的 GitHub 用户名（小写 a-z0-9-，2-39 字符），"
+              f"现在是 {args.handle!r}；不要把 <you> 原样贴进来", file=sys.stderr)
+        return 2
+    if not RUN_RE.match(args.run_id):
+        print(f"--run-id 只能小写 a-z 0-9 . _ -（3-64 字符），现在是 {args.run_id!r}",
+              file=sys.stderr)
+        return 2
+
     src = Path(args.src).expanduser()
     if not src.is_dir():
         print(f"not a directory: {src}", file=sys.stderr)
@@ -271,7 +308,7 @@ def main() -> int:
                 if d.is_dir() and not d.name.startswith(".") and d.name.lower() not in skip]
         for d in subs:
             name = re.sub(r"[^a-z0-9._-]", "-", d.name.lower())[:60] or "challenge"
-            rows.append({"id": name, "family": "other", "difficulty": "unknown",
+            rows.append({"id": name, "family": guess_family(name), "difficulty": "unknown",
                          "outcome": "not_started", "minutes": 0, "flags": 0,
                          "reopens": 0, "triage": "", "first_signal_minutes": 0,
                          "dead_end_reason": "", "next_move": ""})
@@ -322,11 +359,20 @@ def main() -> int:
 
     (run / "sessions").mkdir(parents=True, exist_ok=True)
     (run / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    out_rows = []
+    for r in rows:
+        r = dict(r)
+        if args.kind == "ctf" and not args.flag_total:
+            r.pop("flag_total", None)      # CTF 卷面总数未知：不编数字
+        out_rows.append(r)
     (run / "challenges.jsonl").write_text(
-        "\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + ("\n" if rows else ""),
+        "\n".join(json.dumps(r, ensure_ascii=False) for r in out_rows) + ("\n" if out_rows else ""),
         encoding="utf-8")
-    if notes:
-        (run / "notes.md").write_text(notes, encoding="utf-8")
+
+    # notes.md 无论如何都要有（record.json 里列了它，缺了会 E5）
+    notes = notes or ("# notes" + chr(10) + chr(10) + "- 关键判断：" + chr(10) + "- 排除的路径：" + chr(10))
+    (run / "notes.md").write_text(notes, encoding="utf-8")
     if events_files:
         (run / "events.csv").write_text(redact(events_files[0].read_text(encoding="utf-8", errors="replace")),
                                         encoding="utf-8")

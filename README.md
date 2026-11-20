@@ -128,7 +128,7 @@ git push                          # 分支已跟踪，直接推
 真实 flag、token/`Authorization`、私网 IP（`10.x` / `192.168.x` / `172.16-31.x`）、
 绝对家目录、真实邮箱、二进制文件、单文件 >4MB、`sessions/*.jsonl` 有坏行。
 
-完整清单与规则编号（E1–E8 / W1）见 [`framework/CONTRIBUTING.md`](framework/CONTRIBUTING.md)。
+完整清单与规则编号（E1–E11 / W1–W4）见 [`framework/CONTRIBUTING.md`](framework/CONTRIBUTING.md)。
 
 ## 许可
 
