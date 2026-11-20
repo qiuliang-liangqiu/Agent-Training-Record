@@ -49,7 +49,7 @@ EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 
 
 def redact(text: str) -> str:
-    text = FLAG.sub("flag{REDACTED}", text)
+    text = FLAG.sub("flag{{REDACTED}}", text)
     for rx in SECRETS:
         text = rx.sub("<REDACTED>", text)
     text = PRIVATE_IP.sub("<ip>", text)
@@ -151,7 +151,9 @@ TRAJ_TEMPLATE = """# {cid} 成功轨迹
 ## 复现
 
 ```bash
-# 从零到 flag 的最小命令序列（不要写真实地址和 flag）
+# 从零到 flag 的最小命令序列（地址写 <host>，flag 写 flag{{REDACTED}}）
+unzip {attachment_name}
+file ./extracted
 ```
 
 ## 关键判断
@@ -205,6 +207,7 @@ def build_single(args, src: Path) -> int:
     (run / "challenges.jsonl").write_text(json.dumps(row, ensure_ascii=False) + chr(10), encoding="utf-8")
     (run / "trajectory.md").write_text(
         TRAJ_TEMPLATE.format(cid=cid, attachment=attachment or "（无）",
+                             attachment_name=(files[0].name if files else "attachment.zip"),
                              service=args.service or "（无）", desc=args.description or "（待填）"),
         encoding="utf-8")
     notes = gather_notes(src) or ("# notes" + chr(10) + chr(10) +

@@ -170,6 +170,36 @@ class ValidatorTest(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertIn("E11", r.stdout)
 
+    def test_trajectory_without_code_block_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},
+                              result={"solved": 1, "flags": 1, "score": 100},
+                              files={"notes": "notes.md", "challenges": "challenges.jsonl",
+                                     "trajectory": "trajectory.md"})
+            traj = ("# x" + chr(10) + chr(10) + "## 输入" + chr(10) + chr(10) + "附件 a.zip" + chr(10) +
+                    chr(10) + "## 步骤" + chr(10) + chr(10) + "1. 解压看到 key" + chr(10) +
+                    "2. 用 key 解密拿到路径" + chr(10) + chr(10) + "## 复现" + chr(10) + chr(10) +
+                    "照着上面的步骤做一遍就行，这里没有命令。" + chr(10) * 5)
+            d = self.make(Path(tmp), rec, {"trajectory.md": traj})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("fenced code block", r.stdout)
+
+    def test_trajectory_with_only_comment_block_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},
+                              result={"solved": 1, "flags": 1, "score": 100},
+                              files={"notes": "notes.md", "challenges": "challenges.jsonl",
+                                     "trajectory": "trajectory.md"})
+            traj = ("# x" + chr(10) + chr(10) + "## 输入" + chr(10) + chr(10) + "附件 a.zip" + chr(10) +
+                    chr(10) + "## 步骤" + chr(10) + chr(10) + "1. 解压看到 key" + chr(10) +
+                    "2. 用 key 解密拿到路径" + chr(10) + chr(10) + "## 复现" + chr(10) + chr(10) +
+                    "```bash" + chr(10) + "# TODO" + chr(10) + "```" + chr(10) * 3)
+            d = self.make(Path(tmp), rec, {"trajectory.md": traj})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("empty", r.stdout)
+
     def test_full_trajectory_passes(self):
         with tempfile.TemporaryDirectory() as tmp:
             rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},

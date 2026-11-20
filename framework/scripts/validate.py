@@ -96,6 +96,7 @@ def scan_text(rel: str, text: str) -> list[Finding]:
 
 
 TRAJ_MARKERS = ("## 输入", "## 步骤", "## 复现")
+CODE_FENCE = re.compile(r"```(bash|sh|shell|zsh|powershell|ps1|python)", re.I)
 
 
 def check_trajectory(run: Path, rel: str) -> list[Finding]:
@@ -116,6 +117,23 @@ def check_trajectory(run: Path, rel: str) -> list[Finding]:
     steps = [ln for ln in text.splitlines() if re.match(r"^\s*(\d+[.)]|[-*])\s+\S", ln)]
     if len(steps) < 2:
         f.append(Finding("error", "E11", rel, "need at least 2 concrete steps under ## 步骤"))
+
+    # 复现段必须有可执行的代码块，且不能只有注释
+    try:
+        repro = text[text.index("## 复现"):]
+    except ValueError:
+        repro = ""
+    m = CODE_FENCE.search(repro)
+    if not m:
+        f.append(Finding("error", "E11", rel,
+                         "## 复现 must contain a fenced code block (```bash … ```)"))
+    else:
+        body = repro[m.end():]
+        body = body.split("```", 1)[0]
+        lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+        real = [ln for ln in lines if not ln.startswith("#")]
+        if not real:
+            f.append(Finding("error", "E11", rel, "the repro code block is empty (only comments)"))
     return f
 
 
