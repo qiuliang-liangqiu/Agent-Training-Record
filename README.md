@@ -28,7 +28,12 @@ contributions/
 
 ## 三条命令
 
+**`<...>` 是占位符，要换成你自己的值**：`<you>` = 你的 GitHub 用户名（小写，如 `octocat`），
+`<model>` = 模型 id（如 `deepseek-flash`），`<run-id>` = 自己编的代号。原样照抄 `<you>` 会被拒。
+
 ```bash
+# <you>=你的 GitHub 用户名   <model>=模型 id   <run-id>=自己编的代号
+
 # 1. 生成自己的提交目录
 python framework/scripts/new_submission.py --handle <you> --run-id 2026-11-20-bench \
   --agent pi --version 1.5.2 --model <model> \
@@ -40,6 +45,15 @@ python framework/scripts/validate.py contributions/<you>/2026-11-20-bench
 
 # 3. 全量复核（CI 跑的就是这条）
 python framework/scripts/validate.py contributions
+```
+
+填满的等价例子（可直接复制，把 `octocat` 换成你自己）：
+
+```bash
+python framework/scripts/new_submission.py --handle octocat --run-id 2026-11-21-bench \
+  --agent pi --version 1.5.2 --model deepseek-flash \
+  --kind benchmark --challenges 50 --flag-total 100 --hours 7.9 \
+  --solved 37 --flags 47 --score 13800
 ```
 
 通过的提交开 PR；CI 会跑同一个校验器。**隐私没脱干净会直接红。**
