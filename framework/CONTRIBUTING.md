@@ -92,6 +92,10 @@ python framework/scripts/validate.py contributions/<handle>/<run-id>
 
 ## 6. PR 要求
 
+上传步骤（fork → 分支 → 推送 → 开 PR，含纯网页操作）见根目录 README 的
+[「怎么上传（PR 流程）」](../README.md#怎么上传pr-流程)。
+
+
 - 一个 PR 只加一次提交（或同一人的同一批），不要顺手改别人的目录。
 - 标题：`submission: <handle> <run-id>`。
 - 描述里贴一行 `python framework/scripts/validate.py contributions/<handle>/<run-id>` 的输出。

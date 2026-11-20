@@ -58,6 +58,71 @@ python framework/scripts/new_submission.py --handle octocat --run-id 2026-11-21-
 
 通过的提交开 PR；CI 会跑同一个校验器。**隐私没脱干净会直接红。**
 
+## 怎么上传（PR 流程）
+
+你不是这个仓库的协作者，所以**不能直接 push 到 main**，走 fork + PR。
+两种方式，任选其一。
+
+### 方式 A：本地 git（推荐）
+
+```bash
+# 1. 在 GitHub 上点右上角 Fork（得到 你的用户名/Agent-Training-Record）
+git clone https://github.com/<you>/Agent-Training-Record.git
+cd Agent-Training-Record
+
+# 2. 生成你的提交目录（见上面「三条命令」/「只给了一个附件」）
+python framework/scripts/collect.py --handle <you> --run-id 2026-11-21-bench \
+  --from <日志目录> --challenges 50 --flag-total 100 --hours 7.9 --score 13800
+
+# 3. 本地自检，必须通过
+python framework/scripts/validate.py contributions/<you>/2026-11-21-bench
+
+# 4. 只提交你自己那个目录
+git checkout -b submit/<you>-2026-11-21
+git add contributions/<you>/2026-11-21-bench
+git commit -m "submission: <you> 2026-11-21-bench"
+git push -u origin submit/<you>-2026-11-21
+```
+
+push 完终端会打印一行 `Create a pull request` 的链接，打开它 → 填标题
+`submission: <you> 2026-11-21-bench` → 创建。
+
+### 方式 B：只在网页上做（不想装 git）
+
+1. Fork（右上角）
+2. 在你的 fork 里点 `contributions/` → **Add file → Upload files**
+3. 把整个 `<run-id>` 目录拖进去，**路径必须是** `contributions/<you>/<run-id>/…`
+4. 页面下方选 “Create a new branch for this commit” → 提一个分支名（如 `submit/2026-11-21`）
+5. 提交后会提示 **Compare & pull request** → 创建 PR
+
+> 网页上传时，`record.json` / `challenges.jsonl` / `notes.md` / `events.csv` 要放在
+> `<run-id>/` 里面，不是散在 `contributions/` 下。放错位置 CI 会报 E1（找不到 record.json）。
+
+### PR 里会发生什么
+
+| 阶段 | 内容 |
+|---|---|
+| 自动 CI | 跑 `validate.py contributions`（schema + 隐私扫描 + 行内一致性）+ 单测 |
+| 红了 | 点开 Details 看规则号（E1–E11 / W1–W4），在同一个分支上继续 commit 即可自动重跑 |
+| 绿了 | 维护者 review：数字是否自洽、脱敏是否彻底 |
+| 合并 | 记录进入仓库，用于对比不同模型/配置并改进规则 |
+
+修改 PR 不需要重开：
+
+```bash
+git add contributions/<you>/<run-id>
+git commit --amend --no-edit      # 或者再加一个 commit
+git push                          # 分支已跟踪，直接推
+```
+
+### 上传前最后三件事
+
+1. `python framework/scripts/validate.py contributions/<you>/<run-id>` 本地已经过了
+2. `git status` 里**只有** `contributions/<you>/…`，没有别的文件（别把 `auth.json` 带进去）
+3. 没上传：附件二进制、真实 flag、token、平台地址、真名/邮箱
+
+被拦了不知道怎么办：在 PR 里贴校验器输出，或开 issue 只写规则号（**不要贴敏感内容**）。
+
 ## 硬性拒收
 
 真实 flag、token/`Authorization`、私网 IP（`10.x` / `192.168.x` / `172.16-31.x`）、
