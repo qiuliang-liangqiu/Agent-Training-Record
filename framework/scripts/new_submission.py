@@ -96,7 +96,8 @@ def main() -> int:
 
     args.handle = args.handle.lower()
     if not HANDLE_RE.match(args.handle):
-        print("handle must be lowercase a-z0-9- (2-39 chars)", file=sys.stderr)
+        print("handle 必须是你的 GitHub 用户名（小写 a-z0-9-，2-39 字符），"
+              "例如 octocat；不要把 <you> 原样贴进来", file=sys.stderr)
         return 2
     if not RUN_RE.match(args.run_id):
         print("run-id must be lowercase a-z0-9._- (3-64 chars)", file=sys.stderr)
