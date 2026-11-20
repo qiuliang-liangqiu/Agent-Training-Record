@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -133,6 +134,89 @@ def gather_notes(src: Path) -> str:
     return redact("\n\n".join(parts)) if parts else ""
 
 
+TRAJ_TEMPLATE = """# {cid} 成功轨迹
+
+## 输入
+
+- 附件：{attachment}
+- 服务：{service}
+- 一句话描述：{desc}
+
+## 步骤
+
+1. <第一步：做了什么，看到什么，为什么接着做>
+2. <第二步>
+3. <拿到 flag / 打通的最后一步>
+
+## 复现
+
+```bash
+# 从零到 flag 的最小命令序列（不要写真实地址和 flag）
+```
+
+## 关键判断
+
+| 现象 | 结论 | 如果重来先做什么 |
+|---|---|---|
+| | | |
+
+## 排除的路径
+
+- <试过但没用，为什么>
+"""
+
+
+def build_single(args, src: Path) -> int:
+    """一题一份：附件 + 端口 → 一条成功轨迹。"""
+    files = [p for p in sorted(src.iterdir()) if p.is_file()]
+    attachment = ""
+    if files:
+        big = max(files, key=lambda p: p.stat().st_size)
+        attachment = f"{big.name}（{big.stat().st_size/1024:.0f} KB，sha256 {hashlib.sha256(big.read_bytes()).hexdigest()[:16]}…）"
+    cid = args.challenge_id or (files[0].stem if files else "challenge")
+    cid = re.sub(r"[^a-z0-9._-]", "-", cid.lower())[:60]
+
+    run = Path(args.out) / args.handle / args.run_id
+    record = {
+        "schema": "atr/2",
+        "handle": args.handle,
+        "submitted_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "agent": {"name": args.agent, "version": args.version, "model": args.model},
+        "task": {"kind": "single", "platform": "generic", "challenges": 1,
+                 "flag_total": args.flag_total or 1, "hours": args.hours or 0.1},
+        "result": {"solved": args.solved if args.solved >= 0 else 1,
+                   "flags": args.flags if args.flags >= 0 else 1, "score": args.score},
+        "metrics": {"triage_minutes": 0, "reopen_rate": 0, "failure_stint_median_min": 0},
+        "files": {"notes": "notes.md", "challenges": "challenges.jsonl",
+                  "trajectory": "trajectory.md", "sessions": []},
+        "consent": {"license": args.license, "redistribute": True, "attribution": args.handle},
+    }
+    row = {"id": cid, "family": args.family, "difficulty": args.difficulty,
+           "outcome": "solved" if (args.solved in (-1, 1)) else "dead_end",
+           "minutes": args.minutes or (args.hours * 60 or 0.1), "flags": 1,
+           "reopens": 0, "triage": ""}
+    print(f"单题：{cid} | 附件：{attachment or '（无文件）'}")
+    if args.dry_run:
+        print("[dry-run] 会写 record.json / challenges.jsonl / trajectory.md")
+        return 0
+
+    (run / "sessions").mkdir(parents=True, exist_ok=True)
+    (run / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + chr(10), encoding="utf-8")
+    (run / "challenges.jsonl").write_text(json.dumps(row, ensure_ascii=False) + chr(10), encoding="utf-8")
+    (run / "trajectory.md").write_text(
+        TRAJ_TEMPLATE.format(cid=cid, attachment=attachment or "（无）",
+                             service=args.service or "（无）", desc=args.description or "（待填）"),
+        encoding="utf-8")
+    notes = gather_notes(src) or ("# notes" + chr(10) + chr(10) +
+                                   "- 这题的关键判断：" + chr(10) +
+                                   "- 排除的路径：" + chr(10))
+    (run / "notes.md").write_text(notes, encoding="utf-8")
+    print(f"写到 {run}")
+    print("下一步：把 trajectory.md 的步骤和复现命令填真实内容（这是唯一能学到东西的部分）")
+    import subprocess
+    return subprocess.call([sys.executable, str(ROOT / "framework" / "scripts" / "validate.py"), str(run)])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -151,6 +235,12 @@ def main() -> int:
     ap.add_argument("--flags", type=int, default=-1)
     ap.add_argument("--score", type=int, default=0)
     ap.add_argument("--license", default="CC-BY-4.0")
+    ap.add_argument("--challenge-id", default="", help="单题模式下的题目代号（默认取附件名）")
+    ap.add_argument("--family", default="other", help="单题模式：web/pwn/crypto/rev/forensics/misc/osint")
+    ap.add_argument("--difficulty", default="unknown", choices=["easy", "medium", "hard", "unknown"])
+    ap.add_argument("--service", default="", help="单题模式：host:port（会写进轨迹，注意脱敏）")
+    ap.add_argument("--description", default="", help="单题模式：一句话描述")
+    ap.add_argument("--minutes", type=float, default=0)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -166,6 +256,9 @@ def main() -> int:
         print(f"events: {events_files[0].name} → {len(events)} 条")
     else:
         print("没有 events.csv：challenges.jsonl 只能空着，你需要手填")
+
+    if args.kind == "single":
+        return build_single(args, src)
 
     rows = derive_challenges(events) if events else []
     if not rows and args.kind == "ctf":

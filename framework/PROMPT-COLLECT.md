@@ -69,6 +69,20 @@
      然后**必须**把每行的 `outcome` / `minutes` / `dead_end_reason` 填成真实的，
      不要留 `not_started`
 
+3.6 **只有一道题（附件 / 一个端口）**时：用 `--kind single`，多交一个 `trajectory.md`：
+
+   ```bash
+   python framework/scripts/collect.py --handle <你> --run-id 2026-11-21-one      --from <附件目录> --kind single --family <web|pwn|...> --service <host:port>      --description "<一句话>" --hours <小时>
+   ```
+
+   然后**必须**把 `trajectory.md` 填成能照着复现的版本：
+
+   - `## 输入`：附件名/sha256、服务、题面关键信息
+   - `## 步骤`：至少 2 步，"做了什么 → 看到什么 → 为什么这么做"
+   - `## 复现`：从零到 flag 的最小命令序列（地址用 `<host>`，flag 用 `flag{REDACTED}`）
+
+   附件本身不要提交（二进制、可能含真实 flag）；只写名字/大小/sha256。
+
 4. **没有 `events.csv` 时**：手写 `challenges.jsonl`，每题一行，至少包含
 
    ```json

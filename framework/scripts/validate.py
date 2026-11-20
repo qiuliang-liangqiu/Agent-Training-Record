@@ -31,7 +31,7 @@ import sys
 from pathlib import Path
 
 SCHEMA_ID = "atr/2"
-KINDS = {"benchmark", "ctf", "lab", "other"}
+KINDS = {"benchmark", "ctf", "single", "lab", "other"}
 LICENSES = {"CC-BY-4.0", "CC0-1.0", "MIT"}
 ALLOWED_EXT = {".md", ".txt", ".json", ".jsonl", ".csv", ".tsv"}
 FAMILIES = {"web", "pwn", "crypto", "rev", "forensics", "misc", "osint", "other"}
@@ -93,6 +93,30 @@ def scan_text(rel: str, text: str) -> list[Finding]:
         if EMAIL.search(line) and not EMAIL_OK.search(line):
             out.append(Finding("error", "E7", rel, f"line {i}: e-mail address"))
     return out
+
+
+TRAJ_MARKERS = ("## 输入", "## 步骤", "## 复现")
+
+
+def check_trajectory(run: Path, rel: str) -> list[Finding]:
+    """单题成功路径：必须能照着复现，而不是一句'搞定了'。"""
+    f: list[Finding] = []
+    path = run / rel
+    if not path.exists():
+        return f                      # E5 已经报过缺失
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return f
+    if len(text) < 120:
+        f.append(Finding("error", "E11", rel, "too short to reproduce (<120 chars)"))
+    for marker in TRAJ_MARKERS:
+        if marker not in text:
+            f.append(Finding("error", "E11", rel, f"missing section: {marker}"))
+    steps = [ln for ln in text.splitlines() if re.match(r"^\s*(\d+[.)]|[-*])\s+\S", ln)]
+    if len(steps) < 2:
+        f.append(Finding("error", "E11", rel, "need at least 2 concrete steps under ## 步骤"))
+    return f
 
 
 CHALLENGE_REQUIRED = ("id", "family", "difficulty", "outcome", "minutes", "flags")
@@ -228,8 +252,10 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
     files = rec.get("files") or {}
     if isinstance(files.get("challenges"), str) and files["challenges"]:
         f.extend(check_challenges(run, files["challenges"], rec))
+    if isinstance(files.get("trajectory"), str) and files["trajectory"]:
+        f.extend(check_trajectory(run, files["trajectory"]))
     listed: list[str] = []
-    for key in ("events", "notes", "challenges"):
+    for key in ("events", "notes", "challenges", "trajectory"):
         if isinstance(files.get(key), str) and files[key]:
             listed.append(files[key])
     for item in files.get("sessions") or []:
@@ -291,6 +317,9 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         f.append(Finding("warn", "W1", run_rel, "no metrics block"))
     if not files.get("challenges"):
         f.append(Finding("warn", "W2", run_rel, "challenges.jsonl missing (one row per challenge)"))
+    if task.get("kind") == "single" and not files.get("trajectory"):
+        f.append(Finding("warn", "W4", run_rel,
+                         "kind=single without trajectory.md — the whole point is the reproducible path"))
     if task.get("kind") == "ctf" and task.get("flag_total") == 0 and not files.get("challenges"):
         f.append(Finding("warn", "W3", run_rel,
                          "CTF run without flag_total: please still provide challenges.jsonl"))

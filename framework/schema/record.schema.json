@@ -70,6 +70,7 @@
           "enum": [
             "benchmark",
             "ctf",
+            "single",
             "lab",
             "other"
           ]
@@ -145,6 +146,10 @@
         "challenges": {
           "type": "string",
           "description": "challenges.jsonl：每题一行，见 challenge.schema.json"
+        },
+        "trajectory": {
+          "type": "string",
+          "description": "trajectory.md：单题成功路径（输入 → 步骤 → 复现），kind=single 时必需"
         }
       }
     },

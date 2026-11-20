@@ -15,8 +15,10 @@ VALIDATE = FRAMEWORK / "scripts" / "validate.py"
 
 
 def run(*paths: str) -> subprocess.CompletedProcess:
+    # 校验器会输出中文；Windows 默认 GBK 解码会炸，固定 utf-8
     return subprocess.run([sys.executable, str(VALIDATE), *paths],
-                          capture_output=True, text=True, cwd=ROOT)
+                          capture_output=True, text=True,
+                          encoding="utf-8", errors="replace", cwd=ROOT)
 
 
 ROW_GOOD = ('{"id":"c-01","family":"web","difficulty":"easy","outcome":"solved",'
@@ -148,6 +150,38 @@ class ValidatorTest(unittest.TestCase):
             r = run(str(d))
             self.assertEqual(r.returncode, 0, r.stdout)
             self.assertIn("W2", r.stdout)
+
+    def test_single_without_trajectory_warns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},
+                              result={"solved": 1, "flags": 1, "score": 100})
+            d = self.make(Path(tmp), rec)
+            r = run(str(d))
+            self.assertIn("W4", r.stdout)
+
+    def test_short_trajectory_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},
+                              result={"solved": 1, "flags": 1, "score": 100},
+                              files={"notes": "notes.md", "challenges": "challenges.jsonl",
+                                     "trajectory": "trajectory.md"})
+            d = self.make(Path(tmp), rec, {"trajectory.md": "# t" + chr(10) + chr(10) + "## 输入" + chr(10) + chr(10) + "## 步骤" + chr(10)})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("E11", r.stdout)
+
+    def test_full_trajectory_passes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            rec = base_record(task={"kind": "single", "challenges": 1, "flag_total": 1, "hours": 1},
+                              result={"solved": 1, "flags": 1, "score": 100},
+                              files={"notes": "notes.md", "challenges": "challenges.jsonl",
+                                     "trajectory": "trajectory.md"})
+            traj = ("# x 成功轨迹" + chr(10) + chr(10) + "## 输入" + chr(10) + chr(10) + "附件 evil.zip" + chr(10) + chr(10) + "## 步骤" + chr(10) + chr(10) + "1. 反编译看到 key 写死在 native 层，提取出来" + chr(10) +
+                       "2. 用 key 解密 assets 里的 blob，得到路由和参数名" + chr(10) +
+                       "3. 按路由发请求，回显里拿到 flag" + chr(10) + chr(10) + chr(10) + "## 复现" + chr(10) + chr(10) + "```bash" + chr(10) + "unzip evil.zip" + chr(10) + "```" + chr(10))
+            d = self.make(Path(tmp), rec, {"trajectory.md": traj})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 0, r.stdout)
 
     def test_example_submission_passes(self):
         r = run(str(FRAMEWORK / "examples"))
