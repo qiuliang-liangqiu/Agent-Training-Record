@@ -1,9 +1,0 @@
-time,event,challenge,code,detail
-2026-11-20 09:00:00,start,demo-01,<code>,"easy"
-2026-11-20 09:04:00,score,demo-01,<code>,"+300"
-2026-11-20 09:12:00,close,demo-01,<code>,"solved"
-2026-11-20 09:13:00,start,demo-02,<code>,"medium"
-2026-11-20 09:41:00,close,demo-02,<code>,"dead-end"
-2026-11-20 09:42:00,start,demo-03,<code>,"hard"
-2026-11-20 10:12:00,score,demo-03,<code>,"+600"
-2026-11-20 10:20:00,close,demo-03,<code>,"stopped early"
