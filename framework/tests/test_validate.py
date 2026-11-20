@@ -19,16 +19,20 @@ def run(*paths: str) -> subprocess.CompletedProcess:
                           capture_output=True, text=True, cwd=ROOT)
 
 
+ROW_GOOD = ('{"id":"c-01","family":"web","difficulty":"easy","outcome":"solved",'
+            '"minutes":5,"flags":1,"flag_total":1}')
+
+
 def base_record(**over) -> dict:
     rec = {
-        "schema": "atr/1",
+        "schema": "atr/2",
         "handle": "octocat",
         "submitted_at": "2026-11-20T09:00:00Z",
         "agent": {"name": "pi", "version": "1.5.2", "model": "deepseek-flash"},
         "task": {"kind": "benchmark", "challenges": 10, "flag_total": 20, "hours": 2.5},
         "result": {"solved": 6, "flags": 8, "score": 1200},
         "metrics": {"triage_minutes": 5},
-        "files": {"notes": "notes.md"},
+        "files": {"notes": "notes.md", "challenges": "challenges.jsonl"},
         "consent": {"license": "CC-BY-4.0", "redistribute": True},
     }
     rec.update(over)
@@ -41,6 +45,7 @@ class ValidatorTest(unittest.TestCase):
         run_dir.mkdir(parents=True)
         (run_dir / "record.json").write_text(json.dumps(record, ensure_ascii=False), encoding="utf-8")
         (run_dir / "notes.md").write_text("# notes\n", encoding="utf-8")
+        (run_dir / "challenges.jsonl").write_text(ROW_GOOD + chr(10), encoding="utf-8")
         for rel, text in (extra or {}).items():
             p = run_dir / rel
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -117,6 +122,32 @@ class ValidatorTest(unittest.TestCase):
             d = self.make(Path(tmp), rec)
             r = run(str(d))
             self.assertEqual(r.returncode, 1)
+
+    def test_bad_outcome_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = ROW_GOOD.replace('"solved"', '"gave_up"')
+            d = self.make(Path(tmp), base_record(),
+                          {"challenges.jsonl": bad + chr(10)})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("E9", r.stdout)
+
+    def test_aggregate_mismatch_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            two = ROW_GOOD + chr(10) + ROW_GOOD.replace("c-01", "c-02")
+            d = self.make(Path(tmp), base_record(result={"solved": 0, "flags": 0, "score": 0}),
+                          {"challenges.jsonl": two + chr(10)})
+            r = run(str(d))
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("E10", r.stdout)
+
+    def test_missing_challenges_is_warning(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            d = self.make(Path(tmp), base_record(files={"notes": "notes.md"}))
+            (d / "challenges.jsonl").unlink()
+            r = run(str(d))
+            self.assertEqual(r.returncode, 0, r.stdout)
+            self.assertIn("W2", r.stdout)
 
     def test_example_submission_passes(self):
         r = run(str(FRAMEWORK / "examples"))

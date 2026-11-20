@@ -117,7 +117,7 @@ def main() -> int:
     (run / "sessions").mkdir(parents=True)   # empty dir: git will not track it until a file lands
 
     record = {
-        "schema": "atr/1",
+        "schema": "atr/2",
         "handle": args.handle,
         "submitted_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "agent": {"name": args.agent, "version": args.version, "model": args.model},
@@ -130,7 +130,7 @@ def main() -> int:
         },
         "result": {"solved": args.solved, "flags": args.flags, "score": args.score},
         "metrics": {"triage_minutes": 0, "reopen_rate": 0, "failure_stint_median_min": 0},
-        "files": {"notes": "notes.md", "sessions": []},
+        "files": {"notes": "notes.md", "challenges": "challenges.jsonl", "sessions": []},
         "consent": {"license": args.license, "redistribute": True, "attribution": args.handle},
     }
     if args.thinking:
@@ -138,11 +138,21 @@ def main() -> int:
 
     (run / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (run / "notes.md").write_text(TEMPLATE.format(**{**vars(args), "run_id": args.run_id}), encoding="utf-8")
+    rows = [
+        '{"id":"demo-01","family":"web","difficulty":"easy","outcome":"solved",'
+        '"minutes":5,"flags":1,"flag_total":1,"reopens":0,"triage":"A",'
+        '"first_signal_minutes":2,"dead_end_reason":"","next_move":""}',
+        '{"id":"demo-02","family":"web","difficulty":"medium","outcome":"dead_end",'
+        '"minutes":20,"flags":0,"flag_total":1,"reopens":1,"triage":"B",'
+        '"first_signal_minutes":7,"dead_end_reason":"<why you stopped>",'
+        '"next_move":"<first thing to try if reopened>"}',
+    ]
+    (run / "challenges.jsonl").write_text(chr(10).join(rows) + chr(10), encoding="utf-8")
 
     print(f"created {run}")
     print("next:")
     print(f"  1) edit {run/'record.json'} (real numbers, files.sessions list)")
-    print(f"  2) drop sanitized files into {run}")
+    print(f"  2) 填 challenges.jsonl（每题一行）并放 events.csv / 脱敏会话到 {run}")
     print(f"  3) python framework/scripts/validate.py {run}")
     return 0
 

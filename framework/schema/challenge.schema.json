@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Agent training record — one challenge row (atr/2)",
+  "description": "challenges.jsonl 的一行。这是最有价值的部分：它告诉你时间花在哪、为什么放弃。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "family",
+    "difficulty",
+    "outcome",
+    "minutes",
+    "flags",
+    "flag_total"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "匿名编号，如 demo-01"
+    },
+    "family": {
+      "enum": [
+        "web",
+        "pwn",
+        "crypto",
+        "rev",
+        "forensics",
+        "misc",
+        "osint",
+        "other"
+      ]
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "medium",
+        "hard",
+        "unknown"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "solved",
+        "partial",
+        "dead_end",
+        "env_broken",
+        "out_of_budget",
+        "not_started"
+      ]
+    },
+    "minutes": {
+      "type": "number",
+      "minimum": 0
+    },
+    "flags": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "flag_total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "reopens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "triage": {
+      "enum": [
+        "A",
+        "B",
+        "C",
+        "D",
+        ""
+      ],
+      "description": "triage 阶段给的档位"
+    },
+    "first_signal_minutes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "多久拿到第一条可用事实"
+    },
+    "dead_end_reason": {
+      "type": "string",
+      "description": "放弃/卡住的根因，一句话"
+    },
+    "next_move": {
+      "type": "string",
+      "description": "如果重开，第一招做什么"
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "schema": "atr/1",
+  "schema": "atr/2",
   "handle": "example",
   "submitted_at": "2026-11-20T09:00:00Z",
   "agent": {
@@ -15,7 +15,11 @@
     "flag_total": 6,
     "hours": 1.5
   },
-  "result": { "solved": 2, "flags": 3, "score": 900 },
+  "result": {
+    "solved": 1,
+    "flags": 3,
+    "score": 900
+  },
   "metrics": {
     "triage_minutes": 10,
     "reopen_rate": 0.5,
@@ -24,7 +28,14 @@
   "files": {
     "events": "events.csv",
     "notes": "notes.md",
-    "sessions": ["sessions/sample.jsonl"]
+    "sessions": [
+      "sessions/sample.jsonl"
+    ],
+    "challenges": "challenges.jsonl"
   },
-  "consent": { "license": "CC-BY-4.0", "redistribute": true, "attribution": "example" }
+  "consent": {
+    "license": "CC-BY-4.0",
+    "redistribute": true,
+    "attribution": "example"
+  }
 }

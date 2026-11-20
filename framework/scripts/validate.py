@@ -18,6 +18,8 @@ E5  every file listed in `files` exists, is inside the run dir, and has an allow
 E6  size limits per file / per run
 E7  privacy scan: real flags, tokens, private IPs, absolute home paths, e-mail
 E8  sessions/*.jsonl parse line by line and pass the same privacy scan
+E9  challenges.jsonl rows have the required keys / enums / ranges
+E10 row aggregates do not exceed the run-level numbers in record.json
 W1  (warning) no notes.md / no events.csv / no metrics
 """
 from __future__ import annotations
@@ -28,10 +30,14 @@ import re
 import sys
 from pathlib import Path
 
-SCHEMA_ID = "atr/1"
+SCHEMA_ID = "atr/2"
 KINDS = {"benchmark", "ctf", "lab", "other"}
 LICENSES = {"CC-BY-4.0", "CC0-1.0", "MIT"}
 ALLOWED_EXT = {".md", ".txt", ".json", ".jsonl", ".csv", ".tsv"}
+FAMILIES = {"web", "pwn", "crypto", "rev", "forensics", "misc", "osint", "other"}
+OUTCOMES = {"solved", "partial", "dead_end", "env_broken", "out_of_budget", "not_started"}
+DIFFICULTY = {"easy", "medium", "hard", "unknown"}
+TRIAGE = {"A", "B", "C", "D", ""}
 TEXT_EXT = ALLOWED_EXT
 MAX_FILE = 4 * 1024 * 1024
 MAX_RUN = 12 * 1024 * 1024
@@ -87,6 +93,75 @@ def scan_text(rel: str, text: str) -> list[Finding]:
         if EMAIL.search(line) and not EMAIL_OK.search(line):
             out.append(Finding("error", "E7", rel, f"line {i}: e-mail address"))
     return out
+
+
+CHALLENGE_REQUIRED = ("id", "family", "difficulty", "outcome", "minutes", "flags", "flag_total")
+
+
+def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
+    """Per-challenge rows: the part that actually drives rule/skill changes."""
+    f: list[Finding] = []
+    path = run / rel
+    if not path.exists():
+        return f              # E5 already reported a missing file
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return f
+
+    rows = 0
+    solved = flags = 0
+    for i, line in enumerate(text.splitlines(), 1):
+        if not line.strip():
+            continue
+        rows += 1
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue          # E8 already reported it
+        if not isinstance(row, dict):
+            f.append(Finding("error", "E9", rel, f"line {i}: not an object"))
+            continue
+        for key in CHALLENGE_REQUIRED:
+            if key not in row:
+                f.append(Finding("error", "E9", rel, f"line {i}: missing {key}"))
+        fam = str(row.get("family", ""))
+        if fam and fam not in FAMILIES:
+            f.append(Finding("error", "E9", rel, f"line {i}: family {fam!r}"))
+        out = str(row.get("outcome", ""))
+        if out and out not in OUTCOMES:
+            f.append(Finding("error", "E9", rel, f"line {i}: outcome {out!r}"))
+        diff = str(row.get("difficulty", ""))
+        if diff and diff not in DIFFICULTY:
+            f.append(Finding("error", "E9", rel, f"line {i}: difficulty {diff!r}"))
+        tri = str(row.get("triage", ""))
+        if tri not in TRIAGE:
+            f.append(Finding("error", "E9", rel, f"line {i}: triage {tri!r} (A/B/C/D)"))
+        for key, minimum in (("minutes", 0), ("flags", 0), ("flag_total", 0), ("reopens", 0)):
+            v = row.get(key, 0)
+            if not isinstance(v, (int, float)) or v < minimum:
+                f.append(Finding("error", "E9", rel, f"line {i}: {key} must be >= {minimum}"))
+        if isinstance(row.get("flags"), int) and isinstance(row.get("flag_total"), int):
+            if row["flags"] > row["flag_total"]:
+                f.append(Finding("error", "E9", rel, f"line {i}: flags > flag_total"))
+        if row.get("outcome") == "solved":
+            solved += 1
+        if isinstance(row.get("flags"), int):
+            flags += row["flags"]
+
+
+    res = rec.get("result") or {}
+    task = rec.get("task") or {}
+    if rows and isinstance(task.get("challenges"), int) and rows > task["challenges"]:
+        f.append(Finding("error", "E10", rel,
+                         f"{rows} rows but task.challenges={task['challenges']}"))
+    if isinstance(res.get("flags"), int) and flags > res["flags"]:
+        f.append(Finding("error", "E10", rel,
+                         f"rows claim {flags} flags but result.flags={res['flags']}"))
+    if isinstance(res.get("solved"), int) and solved > res["solved"]:
+        f.append(Finding("error", "E10", rel,
+                         f"{solved} solved rows but result.solved={res['solved']}"))
+    return f
 
 
 def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None, list[Finding]]:
@@ -147,8 +222,10 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
 
     # E5/E6 files
     files = rec.get("files") or {}
+    if isinstance(files.get("challenges"), str) and files["challenges"]:
+        f.extend(check_challenges(run, files["challenges"], rec))
     listed: list[str] = []
-    for key in ("events", "notes"):
+    for key in ("events", "notes", "challenges"):
         if isinstance(files.get(key), str) and files[key]:
             listed.append(files[key])
     for item in files.get("sessions") or []:
@@ -208,6 +285,8 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         f.append(Finding("warn", "W1", run_rel, "no events.csv and no sessions"))
     if not rec.get("metrics"):
         f.append(Finding("warn", "W1", run_rel, "no metrics block"))
+    if not files.get("challenges"):
+        f.append(Finding("warn", "W2", run_rel, "challenges.jsonl missing (one row per challenge)"))
     return rec, f
 
 

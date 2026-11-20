@@ -29,6 +29,23 @@ contributions/<github-handle>/<run-id>/
 
 `record.json` 的 `files` 里列了什么，目录里就必须有什么；列了不存在 = CI 失败。
 
+## 2.5 `challenges.jsonl` 怎么填（最重要的一项）
+
+一题一行。最少要有 `id/family/difficulty/outcome/minutes/flags/flag_total`；
+想让维护者真的能改进，请再补 `reopens`、`triage`、`first_signal_minutes`、
+`dead_end_reason`、`next_move`。
+
+| 字段 | 怎么填 | 为什么有用 |
+|---|---|---|
+| `id` | 自己编的匿名号（`demo-01`） | 关联 notes / events |
+| `outcome` | `solved` / `partial` / `dead_end` / `env_broken` / `out_of_budget` | 区分"不会"和"环境坏" |
+| `minutes` | 实际停留时间（不是时间盒） | 算"失败 stint 中位数" |
+| `reopens` | 这题开了几次 | 重开率是最强的坏味道 |
+| `dead_end_reason` | 一句话根因（"凭据来源不明"） | 决定改哪条规则 |
+| `next_move` | 重开时第一招 | 下次直接照做，不用重新热身 |
+
+不要写真实题号/平台/地址；`flag{REDACTED}` 是唯一允许的占位。
+
 ## 3. 数字怎么填
 
 - `task.challenges` / `flag_total`：卷面总量（不是你做出来的）。
