@@ -95,7 +95,7 @@ def scan_text(rel: str, text: str) -> list[Finding]:
     return out
 
 
-CHALLENGE_REQUIRED = ("id", "family", "difficulty", "outcome", "minutes", "flags", "flag_total")
+CHALLENGE_REQUIRED = ("id", "family", "difficulty", "outcome", "minutes", "flags")
 
 
 def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
@@ -141,9 +141,12 @@ def check_challenges(run: Path, rel: str, rec: dict) -> list[Finding]:
             v = row.get(key, 0)
             if not isinstance(v, (int, float)) or v < minimum:
                 f.append(Finding("error", "E9", rel, f"line {i}: {key} must be >= {minimum}"))
-        if isinstance(row.get("flags"), int) and isinstance(row.get("flag_total"), int):
-            if row["flags"] > row["flag_total"]:
+        ft = row.get("flag_total")
+        if isinstance(row.get("flags"), int) and isinstance(ft, int) and ft > 0:
+            if row["flags"] > ft:
                 f.append(Finding("error", "E9", rel, f"line {i}: flags > flag_total"))
+        elif ft is not None and not isinstance(ft, int):
+            f.append(Finding("error", "E9", rel, f"line {i}: flag_total must be an int or omitted"))
         if row.get("outcome") == "solved":
             solved += 1
         if isinstance(row.get("flags"), int):
@@ -211,7 +214,8 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         if res["solved"] > task["challenges"]:
             f.append(Finding("error", "E3", run_rel, "result.solved > task.challenges"))
     if isinstance(res.get("flags"), int) and isinstance(task.get("flag_total"), (int, float)):
-        if res["flags"] > task["flag_total"]:
+        # flag_total == 0 表示"卷面总数未知"（CTF 常见），此时不做上限检查
+        if task["flag_total"] > 0 and res["flags"] > task["flag_total"]:
             f.append(Finding("error", "E3", run_rel, "result.flags > task.flag_total"))
 
     consent = rec.get("consent") or {}
@@ -287,6 +291,9 @@ def check_record(run: Path, run_rel: str, handle_dir: str) -> tuple[dict | None,
         f.append(Finding("warn", "W1", run_rel, "no metrics block"))
     if not files.get("challenges"):
         f.append(Finding("warn", "W2", run_rel, "challenges.jsonl missing (one row per challenge)"))
+    if task.get("kind") == "ctf" and task.get("flag_total") == 0 and not files.get("challenges"):
+        f.append(Finding("warn", "W3", run_rel,
+                         "CTF run without flag_total: please still provide challenges.jsonl"))
     return rec, f
 
 

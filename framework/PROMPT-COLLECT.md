@@ -56,6 +56,19 @@
    | E10 | 行内合计 > 总数 | 改 `result.*` 或某行 |
    | W1/W2 | 建议项缺失 | 尽量补，不阻塞 |
 
+3.5 **跑的是 CTF（不是跑分平台）**时：
+
+   - 平台通常不导出 `events.csv`，也没有"卷面 flag 总数"
+   - 用 `--kind ctf`：`task.flag_total` 会写 0（未知），行内 `flag_total` 省略
+   - 一题一个目录的布局可以直接给骨架：
+
+     ```bash
+     python framework/scripts/collect.py --handle <你> --run-id 2026-11-21-ctf        --from <每题目录的父目录> --kind ctf --hours <小时> --score <总分>
+     ```
+
+     然后**必须**把每行的 `outcome` / `minutes` / `dead_end_reason` 填成真实的，
+     不要留 `not_started`
+
 4. **没有 `events.csv` 时**：手写 `challenges.jsonl`，每题一行，至少包含
 
    ```json
@@ -66,6 +79,7 @@
    ```
 
    `outcome` ∈ `solved|partial|dead_end|env_broken|out_of_budget|not_started`。
+   CTF 多 flag 题只拿到一部分时用 `partial`，不要写成 `solved`。
 
 ## 必须遵守
 

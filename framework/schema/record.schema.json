@@ -84,7 +84,8 @@
         },
         "flag_total": {
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "description": "卷面 flag 总数；0 = 未知（CTF 常见）"
         },
         "hours": {
           "type": "number",

@@ -168,6 +168,19 @@ def main() -> int:
         print("没有 events.csv：challenges.jsonl 只能空着，你需要手填")
 
     rows = derive_challenges(events) if events else []
+    if not rows and args.kind == "ctf":
+        # 没有事件表时，用「一题一个目录」的常见布局兜底：只给骨架，不编数字
+        skip = {"notes", "sessions", "logs", "attachments", "dist", "node_modules", ".git"}
+        subs = [d for d in sorted(src.iterdir())
+                if d.is_dir() and not d.name.startswith(".") and d.name.lower() not in skip]
+        for d in subs:
+            name = re.sub(r"[^a-z0-9._-]", "-", d.name.lower())[:60] or "challenge"
+            rows.append({"id": name, "family": "other", "difficulty": "unknown",
+                         "outcome": "not_started", "minutes": 0, "flags": 0,
+                         "reopens": 0, "triage": "", "first_signal_minutes": 0,
+                         "dead_end_reason": "", "next_move": ""})
+        if subs:
+            print(f"没有 events.csv：按 {len(subs)} 个子目录生成骨架，outcome/minutes 需要你填")
     hand = src / "challenges.jsonl"
     if hand.exists():
         print("发现手写的 challenges.jsonl，用它（只做脱敏+校验）")
@@ -192,7 +205,10 @@ def main() -> int:
         "submitted_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ"),
         "agent": {"name": args.agent, "version": args.version, "model": args.model},
         "task": {"kind": args.kind, "platform": "generic",
-                 "challenges": challenges, "flag_total": args.flag_total or flags, "hours": hours or 0.1},
+                 # CTF 没有公开的卷面 flag 总数：0 = 未知（校验器不会拿它当上限）
+                 "challenges": challenges,
+                 "flag_total": args.flag_total or (0 if args.kind == "ctf" else flags),
+                 "hours": hours or 0.1},
         "result": result,
         "metrics": {"triage_minutes": 0, "reopen_rate": 0, "failure_stint_median_min": 0},
         "files": {"notes": "notes.md", "challenges": "challenges.jsonl", "sessions": []},

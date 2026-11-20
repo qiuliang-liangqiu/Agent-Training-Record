@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Agent training record — one challenge row (atr/2)",
-  "description": "challenges.jsonl 的一行。这是最有价值的部分：它告诉你时间花在哪、为什么放弃。",
+  "description": "challenges.jsonl 的一行。这是最有价值的部分：时间花在哪、为什么放弃。CTF 的 flag_total 常常未知，省略即可。",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,8 +10,7 @@
     "difficulty",
     "outcome",
     "minutes",
-    "flags",
-    "flag_total"
+    "flags"
   ],
   "properties": {
     "id": {
@@ -58,7 +57,8 @@
     },
     "flag_total": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "description": "该题 flag 总数；CTF 通常未知，可省略"
     },
     "reopens": {
       "type": "integer",
